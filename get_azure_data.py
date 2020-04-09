@@ -23,7 +23,25 @@ columns_to_show = [
 ]
 
 
-def get_table(region: str = "eastus", low_pri: bool = True, host_os: str = "linux"):
+def get_table(
+    region: str = "eastus", low_pri: bool = True, host_os: str = "linux"
+) -> pd.DataFrame:
+    """Retrieves a table of VM prices from https://azureprice.net/ for provided
+    region, OS and priority
+    
+    Parameters
+    ----------
+    region : str, optional
+        [description], by default "eastus"
+    low_pri : bool, optional
+        [description], by default True
+    host_os : str, optional
+        [description], by default "linux"
+    
+    Returns
+    -------
+    pd.DataFrame
+    """
 
     azure_price_url = (
         "https://azureprice.net/"
@@ -57,14 +75,38 @@ def get_table(region: str = "eastus", low_pri: bool = True, host_os: str = "linu
 def calculate_price(
     low_pri_df: pd.DataFrame,
     dedicated_df: pd.DataFrame,
-    num_simulators: int = 100,
+    # num_simulators: int = 100,
     low_pri_num: int = 10,
     dedicated_num: int = 1
     # num_brains: int = 10,
 ):
+    """Calculates the price per hour for given dedicated an low priority node combination
+    
+    Calculation is simply the sum of the lowest VM price for dedicated
+    and low priority nodes, multiplied by the number of instances
+    TODO: 
+        * allow user to provide number of instances per machine
+        * i.e., divide total_nodes / (num_sims_per_node)
 
-    low_pri_cost = low_pri_df.price.min() * num_simulators * low_pri_num
-    dedicated_cost = dedicated_df.price.min() * num_simulators * dedicated_num
+    Parameters
+    ----------
+    low_pri_df : pd.DataFrame
+        [description]
+    dedicated_df : pd.DataFrame
+        [description]
+    low_pri_num : int, optional
+        [description], by default 10
+    dedicated_num : int, optional
+        [description], by default 1#num_brains:int=10
+
+    Returns
+    -------
+    float
+        Total cost per hour
+    """
+
+    low_pri_cost = low_pri_df.price.min() * low_pri_num
+    dedicated_cost = dedicated_df.price.min() * dedicated_num
 
     total_cost = low_pri_cost + dedicated_cost
     return total_cost

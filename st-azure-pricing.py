@@ -1,7 +1,13 @@
 """
-Azure Batch Pricing App
-
+Title: Azure Batch Pricing App
 Author: Ali Zaidi
+Version: -0.0.1
+TODO:
+    - [ ] provide some footnotes on needed resoureces, i.e., for ACI:
+        - `az provider register -n Microsoft.ContainerInstance --subscription {{subscription id}} `
+        - for azure batch:
+        - `az provider register -n Microsoft.Batch --subscription {{subscription id}}`
+    - allow for more than one simulator per node
 """
 
 import pandas as pd
@@ -132,18 +138,24 @@ st.markdown(sub_section_cost)
 
 total_nodes = num_low_pri + num_dedicated_pri
 if total_nodes <= sims_needed:
+    needed_low_pri = sims_needed - num_dedicated_pri
     st.text(
         "WARNING: You've asked for a total of {} machines but need {} to run this many simulators".format(
             total_nodes, sims_needed
         )
     )
+else:
+    needed_low_pri = num_low_pri
 
 low_pri_nodes_needed = min(sims_needed - num_dedicated_pri, num_low_pri)
-cost = calculate_price(low_pri_df, dedicated_df, sims_needed)
+desired_cost = calculate_price(low_pri_df, dedicated_df, num_low_pri, num_dedicated_pri)
+actual_cost = calculate_price(
+    low_pri_df, dedicated_df, needed_low_pri, num_dedicated_pri
+)
 
 st.text(
     "You asked to run {} simulators, this will cost ${} per hour".format(
-        total_nodes, round(cost, 2)
+        total_nodes, round(desired_cost, 2)
     )
 )
 
