@@ -1,0 +1,21 @@
+# User vscode config
+.vscode/*
+
+# ignored etc
+etc/
+
+# Vim files
+*.sw[l-p]
+
+# User brains
+.brains
+
+# Python intermediate files
+*.pyc
+**/__pycache__/*
+.ipynb_checkpoints/
+
+# Packaging files
+cs_project_template.egg-info/*
+build
+dist
