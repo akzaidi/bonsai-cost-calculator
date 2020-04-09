@@ -8,6 +8,23 @@ TODO:
         - for azure batch:
         - `az provider register -n Microsoft.Batch --subscription {{subscription id}}`
     - allow for more than one simulator per node
+    - additional metadata:
+        - SKU summary
+        - pool summary
+    - add ACR pricing
+    - ensure same SKU is used for both dedicated and low_pri
+    - any chance to include discounts based on Azure committment levels [probably a different API altogether]
+    - from price per hour, let's get to price per eap:
+        - cost_per_hour * num_hours_eap 
+        - num_hours_eap = num_brains / (num_episodes)
+        - num_iterations_per_episode
+    - how to distribute:
+        - @Aydan: pyinstaller -> executable -> share -> profit?
+QUESTIONS:
+    - @Aydan: how to calculate cost for the entire project
+    - @Nick: backfit from dollar amount -> number of iterations / number of brains
+    - @Aydan: go from # brains / # concepts 
+    - @Nick: export to CSV
 """
 
 import pandas as pd
@@ -34,7 +51,7 @@ def load_image(img):
 st.image(load_image("imgs/bonsai-logo.png"), width=70)
 
 st.markdown(
-    """_This is a simple calculator for running Azure Batch Jobs with [`cs-batch-orchestration`](https://github.com/BonsaiAI/cs-batch-orchestration)_"""
+    """_This is a simple calculator for running Azure Batch Jobs with [`cs-batch-orchestration`](https://github.com/BonsaiAI/cs-batch-orchestration)._ It relies on the public pricing information available on [azureprice.net](https://azureprice.net/)."""
 )
 
 st.markdown(
@@ -67,6 +84,10 @@ num_cores = st.sidebar.slider(
 
 memory = st.sidebar.number_input(
     "Memory needed per container (GB)", min_value=0.25, max_value=32.0, value=1.0
+)
+
+dollar_quoata = st.sidebar.number_input(
+    "How much can you spend for one brain ($)", min_value=10, max_value=10000, value=50,
 )
 
 num_low_pri = st.sidebar.number_input(
@@ -134,13 +155,17 @@ sims_needed = ceil(desired_hz / sim_speed)
 
 sub_section_cost = "### Hourly Cost for Running {} simulators: ".format(sims_needed)
 
-st.markdown(sub_section_cost)
+st.markdown(
+    sub_section_cost
+    + "\n"
+    + "The price below is calculated per hour by selecting the cheapest machine based on the CPU and memory requirements you have, and multiplying it by the number of simulators you will need to get your desired speed. Note, if you ask for more simulators than your budget allows, we will print a warning and show you the cost based on your max allocations."
+)
 
 total_nodes = num_low_pri + num_dedicated_pri
 if total_nodes <= sims_needed:
     needed_low_pri = sims_needed - num_dedicated_pri
-    st.text(
-        "WARNING: You've asked for a total of {} machines but need {} to run this many simulators".format(
+    st.markdown(
+        " ## :warning: WARNING : You've asked for a total of {} machines but need {} to run this many simulators".format(
             total_nodes, sims_needed
         )
     )
@@ -153,10 +178,33 @@ actual_cost = calculate_price(
     low_pri_df, dedicated_df, needed_low_pri, num_dedicated_pri
 )
 
-st.text(
-    "You asked to run {} simulators, this will cost ${} per hour".format(
+st.markdown(
+    "### You asked to run {} simulators, this will cost ${} per hour".format(
         total_nodes, round(desired_cost, 2)
     )
+)
+
+
+st.markdown(
+    """
+# Calculating Cost for One Brain \n
+Rather than deriving an hourly estimate for running a simulation job, 
+you can derive the overall cost for training a brain based on the 
+compute requirements of your simulator and constrained by your overall budget.
+
+At a gross simplication, here is how we estimate the brain cost:
+
+$$
+\\text{Project Cost} = \\text{(number of iterations per experiment)} \\times \\text{(number of experiments)} \\times \\text{(sim cost per iteration)}
+$$
+"""
+)
+
+brain_iterations = st.slider(
+    "Number of iterations needed per Brain (in millions)",
+    value=int(10),
+    min_value=int(1),
+    max_value=int(10 ** 2),
 )
 
 

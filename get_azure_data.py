@@ -2,8 +2,6 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
 import json
-import time
-import requests
 
 columns_to_show = [
     "name",
@@ -43,13 +41,13 @@ def get_table(
     pd.DataFrame
     """
 
-    azure_price_url = (
-        "https://azureprice.net/"
-        + "?region="
-        + region
-        + "&?priority="
-        + str(low_pri).lower()
-    )
+    azure_price_url = "https://azureprice.net/" + "?region=" + region
+
+    if low_pri:
+        azure_price_url += "&priority=true"
+    else:
+        azure_price_url += "&priority=false"
+
     print(azure_price_url)
 
     html = urlopen(azure_price_url)
@@ -79,7 +77,7 @@ def calculate_price(
     low_pri_num: int = 10,
     dedicated_num: int = 1
     # num_brains: int = 10,
-):
+) -> float:
     """Calculates the price per hour for given dedicated an low priority node combination
     
     Calculation is simply the sum of the lowest VM price for dedicated
