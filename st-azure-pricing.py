@@ -3,7 +3,7 @@ Title: Azure Batch Pricing App
 Author: Ali Zaidi
 Version: -0.0.1
 TODO:
-    - [ ] provide some footnotes on needed resoureces, i.e., for ACI:
+    - [ ] provide some footnotes on needed resources, i.e., for ACI:
         - `az provider register -n Microsoft.ContainerInstance --subscription {{subscription id}} `
         - for azure batch:
         - `az provider register -n Microsoft.Batch --subscription {{subscription id}}`
@@ -12,29 +12,39 @@ TODO:
         - SKU summary
         - pool summary
     - add ACR pricing
-    - ensure same SKU is used for both dedicated and low_pri
-    - any chance to include discounts based on Azure committment levels [probably a different API altogether]
-    - from price per hour, let's get to price per eap:
+    - [x] ensure same SKU is used for both dedicated and low_pri
+    - [x] any chance to include discounts based on Azure commitment levels [probably a different API altogether] `wontdo` - non-general mechanics
+    - [x] from price per hour, let's get to price per eap:
         - cost_per_hour * num_hours_eap 
         - num_hours_eap = num_brains / (num_episodes)
         - num_iterations_per_episode
-    - how to distribute:
+    - [x] how to distribute:
         - @Aydan: pyinstaller -> executable -> share -> profit?
 QUESTIONS:
     - @Aydan: how to calculate cost for the entire project
     - @Nick: backfit from dollar amount -> number of iterations / number of brains
     - @Aydan: go from # brains / # concepts 
     - @Nick: export to CSV
+    - @Matt: any provisions for redundancy / resiliency?
 """
+
+import base64
+import datetime
+import os
+from math import ceil, floor
+from os import cpu_count
+from typing import List, Tuple
 
 import pandas as pd
 import streamlit as st
-import os
-from math import ceil
-from get_azure_data import get_table, calculate_price
 from PIL import Image
 
-st.title("Azure Pricing Calculator for Azure Batch")
+from get_azure_data import calculate_price, get_table
+
+st.beta_set_page_config(layout="wide")
+
+
+st.title("ACT Now! Azure Costing Tool for Bonsai Experiments")
 pd.set_option("display.float_format", lambda x: "%.3f" % x)
 
 st.subheader(
@@ -51,7 +61,7 @@ def load_image(img):
 st.image(load_image("imgs/bonsai-logo.png"), width=70)
 
 st.markdown(
-    """_This is a simple calculator for running Azure Batch Jobs with [`cs-batch-orchestration`](https://github.com/BonsaiAI/cs-batch-orchestration)._ It relies on the public pricing information available on [azureprice.net](https://azureprice.net/)."""
+    """_This is a simple calculator for running Azure Batch Jobs with [`batch-orchestration`](https://github.com/BonsaiAI/batch-orchestration)._ It relies on the public pricing information available on [azureprice.net](https://azureprice.net/)."""
 )
 
 st.markdown(
@@ -61,18 +71,28 @@ st.markdown(
     """
 )
 
+
 region_selectbox = st.sidebar.selectbox(
     "Which region will you use for batch?",
-    ("westus", "westus2", "eastus", "eastus2", "westeurope", "centralus"),
+    (
+        "westus",
+        "westus2",
+        "eastus",
+        "eastus2",
+        "westeurope",
+        "southcentralus",
+        "centralus",
+    ),
 )
 
 os_selectbox = st.sidebar.selectbox("Which OS will you be using?", ("windows", "linux"))
 
 sim_speed = st.sidebar.number_input(
     "Simulator speed for a single instance (it / s)",
-    value=10.0,
-    min_value=0.0,
-    max_value=500.0,
+    value=10.000,
+    min_value=0.000,
+    max_value=500.000,
+    format="%.4f",
 )
 
 num_cores = st.sidebar.slider(
@@ -82,36 +102,56 @@ num_cores = st.sidebar.slider(
     value=int(2),
 )
 
+gpu_needed = st.sidebar.selectbox(
+    "Type of GPU needed for simulations",
+    options=["None", "NC-series", "NV-series", "Either"],
+    index=0,
+)
+
 memory = st.sidebar.number_input(
-    "Memory needed per container (GB)", min_value=0.25, max_value=32.0, value=1.0
+    "Memory needed per container (GB)",
+    min_value=0.50,
+    max_value=32.0,
+    value=1.0,
+    step=0.5,
 )
 
-dollar_quoata = st.sidebar.number_input(
-    "How much can you spend for one brain ($)", min_value=10, max_value=10000, value=50,
-)
-
-num_low_pri = st.sidebar.number_input(
-    "Number of low-priority virtual machines",
-    value=int(10),
-    min_value=int(0),
-    max_value=int(1000),
-)
-
-num_dedicated_pri = st.sidebar.number_input(
-    "Number of dedicated virtual machines",
-    value=int(1),
-    min_value=int(0),
-    max_value=int(1000),
+desired_iterations = st.sidebar.number_input(
+    "Desired #iterations per experiment",
+    value=int(100000),
+    min_value=int(1000),
+    max_value=int(100000000),
+    step=1000,
 )
 
 
-@st.cache
-def load_data(region, memory: float = memory, num_cores: int = num_cores):
+@st.cache(allow_output_mutation=True)
+def load_data(
+    region: str,
+    memory: float = memory,
+    num_cores: int = num_cores,
+    gpu_needed: str = gpu_needed,
+) -> Tuple[pd.Series, pd.Series]:
 
     # print("getting data for {}".format(region))
     # print("os: {}".format(os_selectbox))
     low_pri_df = get_table(region=region, low_pri=True, host_os=os_selectbox)
     dedicated_df = get_table(region=region, low_pri=False, host_os=os_selectbox)
+
+    if gpu_needed == "NC-series":
+        low_pri_df = low_pri_df[low_pri_df["name"].str.contains("NC")]
+        dedicated_df = dedicated_df[dedicated_df["name"].str.contains("NC")]
+        if low_pri_df.shape[0] == 0:
+            raise ValueError(
+                f"No NC-series VMs available in {region}. Please try westus2, southcentral, or eastus"
+            )
+    elif gpu_needed == "NV-series":
+        low_pri_df = low_pri_df[low_pri_df["name"].str.contains("NV")]
+        dedicated_df = dedicated_df[dedicated_df["name"].str.contains("NV")]
+        if low_pri_df.shape[0] == 0:
+            raise ValueError(
+                f"No NV-series VMs available in {region}. Please try westus2, southcentral, or eastus"
+            )
 
     if os_selectbox == "linux":
         low_pri_df["price"] = low_pri_df["linuxPrice"]
@@ -137,91 +177,183 @@ def load_data(region, memory: float = memory, num_cores: int = num_cores):
 
 low_pri_df, dedicated_df = load_data(region=region_selectbox)
 
+# cheapest_vms = low_pri_df.
+
 # Calculate Pricing:
 
-
 st.markdown(
     """
-    ## Estimated Cost Per Hour:  
-    Here we estimate the cost for running Azure Batch Jobs for an Hour
+    ## Estimated Cost Per Experiment:  
     """
 )
 
-desired_hz = st.slider(
-    "Desired iteration speed (it / s): ", min_value=10.0, max_value=5000.0, value=100.0
-)
+# expected time to reach desired iterations at single sim speed:
+time_one_sim = desired_iterations / sim_speed
 
-sims_needed = ceil(desired_hz / sim_speed)
 
-sub_section_cost = "### Hourly Cost for Running {} simulators: ".format(sims_needed)
+def get_time_to_reach(sim_time, sim_pad: bool = True):
 
-st.markdown(
-    sub_section_cost
-    + "\n"
-    + "The price below is calculated per hour by selecting the cheapest machine based on the CPU and memory requirements you have, and multiplying it by the number of simulators you will need to get your desired speed. Note, if you ask for more simulators than your budget allows, we will print a warning and show you the cost based on your max allocations."
-)
+    hours_time = sim_time / (60 * 60)
 
-total_nodes = num_low_pri + num_dedicated_pri
-if total_nodes <= sims_needed:
-    needed_low_pri = sims_needed - num_dedicated_pri
-    st.markdown(
-        " ## :warning: WARNING : You've asked for a total of {} machines but need {} to run this many simulators".format(
-            total_nodes, sims_needed
-        )
-    )
-else:
-    needed_low_pri = num_low_pri
+    if hours_time > 24:
+        formatted_time = hours_time / 24
+        units = "days"
+    elif (hours_time < 1) and (hours_time >= (1 / 60)):
+        formatted_time = hours_time * 60
+        units = "minutes"
+    elif hours_time < 1 / 60:
+        formatted_time = sim_time
+        units = "seconds"
+    else:
+        formatted_time = hours_time
+        units = "hours"
 
-low_pri_nodes_needed = min(sims_needed - num_dedicated_pri, num_low_pri)
-desired_cost = calculate_price(low_pri_df, dedicated_df, num_low_pri, num_dedicated_pri)
-actual_cost = calculate_price(
-    low_pri_df, dedicated_df, needed_low_pri, num_dedicated_pri
-)
+    if sim_pad:
+        padding = "sim-"
+    else:
+        padding = ""
 
-st.markdown(
-    "### You asked to run {} simulators, this will cost ${} per hour".format(
-        total_nodes, round(desired_cost, 2)
-    )
-)
+    return f"{formatted_time:,.2f} {padding}{units}"
 
 
 st.markdown(
-    """
-# Calculating Cost for One Brain \n
-Rather than deriving an hourly estimate for running a simulation job, 
-you can derive the overall cost for training a brain based on the 
-compute requirements of your simulator and constrained by your overall budget.
+    f"* In order to reach {desired_iterations:,} iterations, you'll need **{get_time_to_reach(time_one_sim)}** to complete training."
+)
 
-At a gross simplication, here is how we estimate the brain cost:
+desired_nodes = st.slider(
+    "Max number of instances for training", min_value=10, max_value=750, value=300
+)
 
-$$
-\\text{Project Cost} = \\text{(number of iterations per experiment)} \\times \\text{(number of experiments)} \\times \\text{(sim cost per iteration)}
-$$
+
+time_scaled_seconds = time_one_sim / desired_nodes
+time_scaled_hours = time_scaled_seconds / (60 * 60)
+
+st.markdown(
+    f"* With {desired_nodes} running simulators, your time to {desired_iterations:,} iterations is **{get_time_to_reach(time_scaled_seconds, False)}**."
+)
+
+
+st.markdown("### Selecting VM SKU:")
+
+st.markdown(
+    "Let's also select a ratio for low priority virtual machines to dedicated virtual machines. Low-priority virtual machines are significantly discounted from dedicated virtual machines (often a third or fourth of the price) but can be pre-empted during peak demand."
+)
+
+low_pri_perc = st.slider(
+    "Low priority virtual machines to dedicated virtual machines ratio",
+    min_value=0.0,
+    max_value=1.0,
+    value=0.9,
+)
+
+low_pri_nodes = floor(low_pri_perc * desired_nodes)
+dedicated_nodes = desired_nodes - low_pri_nodes
+
+st.markdown(
+    f"You've selected to run {low_pri_nodes} low-priority nodes and {dedicated_nodes} dedicated nodes."
+)
+
+
+def filter_df(input_df):
+
+    output_df = input_df
+    output_df["memory"] = output_df.memoryInMB / 1024
+    output_df = output_df.query(f"numberOfCores >= {num_cores} and memory >= {memory}")
+    output_df = output_df.sort_values("price", ascending=True)
+
+    return output_df
+
+
+def join_df(df1, df2):
+
+    df2 = df2[["name", "price"]]
+    return df1.merge(df2, on="name", how="left", suffixes=["_low", "_dedicated"])
+
+
+low_pri2_df = filter_df(low_pri_df)
+ded2_df = filter_df(dedicated_df)
+joined_df = join_df(low_pri2_df, ded2_df)
+
+best_sku = joined_df.name[0]
+low_price = joined_df.price_low[0]
+ded_price = joined_df.price_dedicated[0]
+best_loc = joined_df.bestPriceRegion[0].split(" / ")
+total_cost = (low_price * time_scaled_hours * low_pri_nodes) + (
+    ded_price + time_scaled_hours * dedicated_nodes
+)
+
+
+st.markdown(
+    f"In {region_selectbox}, the best price for a {num_cores}-core machine with {memory} GB RAM is a **{best_sku}** VM which costs ${low_price}/hour for one low-priority VM and ${ded_price}/hour for one dedicated VM. You can save **{float(best_loc[1])*-1}%** if you instead use __{best_loc[0]}__."
+)
+
+st.markdown(
+    f"""
+## Total Cost Projection:
+Your total cost in {region_selectbox} is **${total_cost:,.2f}**.
+\n**Note**, prices are based on estimates for {datetime.datetime.now().strftime("%Y-%m-%d, %H:%M (PST).")}
 """
 )
 
-brain_iterations = st.slider(
-    "Number of iterations needed per Brain (in millions)",
-    value=int(10),
-    min_value=int(1),
-    max_value=int(10 ** 2),
+st.dataframe(
+    joined_df[
+        [
+            "name",
+            "price_low",
+            "price_dedicated",
+            "numberOfCores",
+            "memory",
+            "bestPriceRegion",
+        ]
+    ]
 )
 
 
-# print out subsection with azure tables
+def download_link(object_to_download, download_filename, download_link_text):
+    """
+    Generates a link to download the given object_to_download.
+
+    object_to_download (str, pd.DataFrame):  The object to be downloaded.
+    download_filename (str): filename and extension of file. e.g. mydata.csv, some_txt_output.txt
+    download_link_text (str): Text to display for download link.
+
+    Examples:
+    download_link(YOUR_DF, 'YOUR_DF.csv', 'Click here to download data!')
+    download_link(YOUR_STRING, 'YOUR_STRING.txt', 'Click here to download your text!')
+
+    """
+    if isinstance(object_to_download, pd.DataFrame):
+        object_to_download = object_to_download.to_csv(index=False)
+
+    # some strings <-> bytes conversions necessary here
+    b64 = base64.b64encode(object_to_download.encode()).decode()
+
+    return f'<a href="data:file/txt;base64,{b64}" download="{download_filename}">{download_link_text}</a>'
 
 
-st.markdown(
-    """
-    ## Low Priority Virtual Machines: 
-    """
+st.markdown("## Download Cost Summary")
+df = pd.DataFrame(
+    {
+        "region": region_selectbox,
+        "best_region": best_loc[0],
+        "price_diff_pct": best_loc[1],
+        "SKU": best_sku,
+        "low_pri_price": low_price,
+        "dedicated_price": ded_price,
+        "desired_machines": desired_nodes,
+        "desired_iterations": desired_iterations,
+        "total_cost": total_cost,
+    },
+    index=[0],
 )
-low_pri_df
 
-st.markdown(
-    """
-    ## Dedicated Virtual Machines: 
-    """
-)
+# Examples
 
-dedicated_df
+st.write(df)
+
+if st.button("Download Dataframe as CSV"):
+    tmp_download_link = download_link(
+        df, "cost.csv", "Click here to download your data!"
+    )
+    st.markdown(tmp_download_link, unsafe_allow_html=True)
+
