@@ -1,5 +1,5 @@
 bs4==0.0.1
 pandas==0.25.1
 Pillow==6.2.0
-streamlit==0.57.3
+streamlit==0.69.2
 urllib3==1.25.7

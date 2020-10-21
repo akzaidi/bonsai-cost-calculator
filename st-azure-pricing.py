@@ -44,12 +44,8 @@ from get_azure_data import calculate_price, get_table
 st.beta_set_page_config(layout="wide")
 
 
-st.title("ACT Now! Azure Costing Tool for Bonsai Experiments")
+st.title("ACT Now! Estimated Azure Costing Tool for Bonsai Experiments")
 pd.set_option("display.float_format", lambda x: "%.3f" % x)
-
-st.subheader(
-    "[Ali Zaidi](https://github.com/akzaidi) @ [Bonsai](https://www.bons.ai/), Microsoft AI and Research"
-)
 
 
 @st.cache
