@@ -57,7 +57,7 @@ def load_image(img):
 st.image(load_image("imgs/bonsai-logo.png"), width=70)
 
 st.markdown(
-    """_This is a simple calculator for running Azure Batch Jobs with [`batch-orchestration`](https://github.com/BonsaiAI/batch-orchestration)._ It relies on the public pricing information available on [azureprice.net](https://azureprice.net/)."""
+    """_This is a simple calculator for the cost of running Azure Batch Jobs with [`bonsai-batch`](https://github.com/microsoft/bonsai-batch)._ It relies on the public pricing information available on [azureprice.net](https://azureprice.net/)."""
 )
 
 st.markdown(
@@ -263,7 +263,8 @@ def filter_df(input_df):
 def join_df(df1, df2):
 
     df2 = df2[["name", "price"]]
-    return df1.merge(df2, on="name", how="left", suffixes=["_low", "_dedicated"])
+    joined_df = df1.merge(df2, on="name", how="left", suffixes=["_low", "_dedicated"])
+    return joined_df
 
 
 low_pri2_df = filter_df(low_pri_df)
@@ -287,7 +288,7 @@ st.markdown(
     f"""
 ## Total Cost Projection:
 Your total cost in {region_selectbox} is **${total_cost:,.2f}**.
-\n**Note**, prices are based on estimates for {datetime.datetime.now().strftime("%Y-%m-%d, %H:%M (PST).")}
+\n**Note**, prices are in dollars and based on estimates for {datetime.datetime.now().strftime("%Y-%m-%d, %H:%M (PST).")}
 """
 )
 
@@ -301,7 +302,7 @@ st.dataframe(
             "memory",
             "bestPriceRegion",
         ]
-    ]
+    ].style.set_precision(2)
 )
 
 
