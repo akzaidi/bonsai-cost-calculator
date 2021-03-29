@@ -111,7 +111,19 @@ def calculate_price(
     return total_cost
 
 
+def get_aci_pricing():
+
+    aci_url = "https://azure.microsoft.com/en-us/pricing/details/container-instances/"
+    # aci_calculator_url = "https://azure.microsoft.com/en-us/pricing/calculator/?service=container-instances"
+    html = urlopen(aci_url)
+    soup = BeautifulSoup(html, "html.parser")
+    body_script = soup.find("body").script
+    body_script_contents = body_script.contents
+
+    return body_script_contents
+
+
 if __name__ == "__main__":
 
-    print(get_table("westus").head())
-    # pass
+    # print(get_table("westus").head())
+    get_aci_pricing()

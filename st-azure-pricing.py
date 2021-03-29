@@ -41,7 +41,7 @@ from PIL import Image
 
 from get_azure_data import calculate_price, get_table
 
-st.beta_set_page_config(layout="wide")
+st.set_page_config(layout="wide")
 
 
 st.title("ACT Now! Estimated Azure Costing Tool for Bonsai Experiments")
