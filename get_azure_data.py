@@ -45,15 +45,16 @@ def get_table(
     azure_price_url = "https://azureprice.net/" + "?region=" + region
 
     if low_pri:
-        azure_price_url += "&priority=true"
+        azure_price_url += "&priority=low"
     else:
-        azure_price_url += "&priority=false"
+        azure_price_url += "&priority=standard"
 
     print(azure_price_url)
 
     html = urlopen(azure_price_url)
     soup = BeautifulSoup(html, "html.parser")
-    body_script = soup.find("body").script
+    # body_script = soup.find("body").script
+    body_script = soup.find_all("script")[16]
     body_script_contents = body_script.contents
 
     table_str = str(body_script_contents)
@@ -125,5 +126,5 @@ def get_aci_pricing():
 
 if __name__ == "__main__":
 
-    # print(get_table("westus").head())
-    get_aci_pricing()
+    print(get_table("westus").head())
+    # get_aci_pricing()
