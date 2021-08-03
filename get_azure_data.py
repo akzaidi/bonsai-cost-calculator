@@ -54,11 +54,12 @@ def get_table(
     html = urlopen(azure_price_url)
     soup = BeautifulSoup(html, "html.parser")
     # body_script = soup.find("body").script
-    body_script = soup.find_all("script")[16]
+    body_script = soup.find_all("script")[17]
     body_script_contents = body_script.contents
 
     table_str = str(body_script_contents)
-    b = table_str[17:-11]
+    # extract data
+    b = table_str[15:-7]
 
     if host_os == "linux":
         drop_os = "windows"
