@@ -150,22 +150,22 @@ def load_data(
             )
 
     if os_selectbox == "linux":
-        low_pri_df["price"] = low_pri_df["linuxPrice"]
-        dedicated_df["price"] = dedicated_df["linuxPrice"]
+        low_pri_df["Price"] = low_pri_df["Linux Cost"].astype(float)
+        dedicated_df["Price"] = dedicated_df["Linux Cost"].astype(float)
     else:
-        low_pri_df["price"] = low_pri_df["windowsPrice"]
-        dedicated_df["price"] = dedicated_df["windowsPrice"]
+        low_pri_df["Price"] = low_pri_df["Windows Cost"].astype(float)
+        dedicated_df["Price"] = dedicated_df["Windows Cost"].astype(float)
 
     low_pri_df = low_pri_df[
-        (low_pri_df.numberOfCores >= num_cores)
-        & (low_pri_df.memoryInMB >= memory * 1024)
-        & (low_pri_df.price > 0)
+        (low_pri_df.vCPUs.astype("float") >= num_cores)
+        & (low_pri_df["Memory (GiB)"].astype("float") >= memory)
+        & (low_pri_df.Price.astype("float") > 0)
     ]
 
     dedicated_df = dedicated_df[
-        (dedicated_df.numberOfCores >= num_cores)
-        & (dedicated_df.memoryInMB >= memory * 1024)
-        & (dedicated_df.price > 0)
+        (dedicated_df.vCPUs.astype("float") >= num_cores)
+        & (dedicated_df["Memory (GiB)"].astype("float") >= memory)
+        & (dedicated_df.Price.astype("float") > 0)
     ]
 
     return low_pri_df, dedicated_df
@@ -253,17 +253,22 @@ st.markdown(
 def filter_df(input_df):
 
     output_df = input_df
-    output_df["memory"] = output_df.memoryInMB / 1024
-    output_df = output_df.query(f"numberOfCores >= {num_cores} and memory >= {memory}")
-    output_df = output_df.sort_values("price", ascending=True)
+    # output_df["memory"] = output_df["Memory (GiB)"]
+    # output_df = output_df.query(f"vCPUs >= {num_cores} and Memory (GiB) >= {memory}")
+    output_df = output_df[
+        (output_df["vCPUs"] >= num_cores) & (output_df["Memory (GiB)"] >= memory)
+    ]
+    output_df = output_df.sort_values("Price", ascending=True)
 
     return output_df
 
 
 def join_df(df1, df2):
 
-    df2 = df2[["name", "price"]]
-    joined_df = df1.merge(df2, on="name", how="left", suffixes=["_low", "_dedicated"])
+    df2 = df2[["VM Name", "Price"]]
+    joined_df = df1.merge(
+        df2, on="VM Name", how="left", suffixes=[" (Low Pri)", " (Dedicated)"]
+    )
     return joined_df
 
 
@@ -271,17 +276,17 @@ low_pri2_df = filter_df(low_pri_df)
 ded2_df = filter_df(dedicated_df)
 joined_df = join_df(low_pri2_df, ded2_df)
 
-best_sku = joined_df.name[0]
-low_price = joined_df.price_low[0]
-ded_price = joined_df.price_dedicated[0]
-best_loc = joined_df.bestPriceRegion[0].split(" / ")
+best_sku = joined_df["VM Name"][0]
+low_price = joined_df["Price (Low Pri)"][0]
+ded_price = joined_df["Price (Dedicated)"][0]
+best_loc = joined_df["Best price region / Diff"][0].split(" / ")
 total_cost = (low_price * time_scaled_hours * low_pri_nodes) + (
     ded_price + time_scaled_hours * dedicated_nodes
 )
 
 
 st.markdown(
-    f"In {region_selectbox}, the best price for a {num_cores}-core machine with {memory} GB RAM is a **{best_sku}** VM which costs ${low_price}/hour for one low-priority VM and ${ded_price}/hour for one dedicated VM. You can save **{float(best_loc[1])*-1}%** if you instead use __{best_loc[0]}__."
+    f"In {region_selectbox}, the best price for a {num_cores}-core machine with {memory} GB RAM is a **{best_sku}** VM which costs ${low_price}/hour for one low-priority VM and ${ded_price}/hour for one dedicated VM. You can save **{best_loc[1]}%** if you instead use __{best_loc[0]}__."
 )
 
 st.markdown(
@@ -295,12 +300,12 @@ Your total cost in {region_selectbox} is **${total_cost:,.2f}**.
 st.dataframe(
     joined_df[
         [
-            "name",
-            "price_low",
-            "price_dedicated",
-            "numberOfCores",
-            "memory",
-            "bestPriceRegion",
+            "VM Name",
+            "Price (Low Pri)",
+            "Price (Dedicated)",
+            "vCPUs",
+            "Memory (GiB)",
+            "Best price region / Diff",
         ]
     ].style.set_precision(2)
 )
@@ -331,15 +336,15 @@ def download_link(object_to_download, download_filename, download_link_text):
 st.markdown("## Download Cost Summary")
 df = pd.DataFrame(
     {
-        "region": region_selectbox,
-        "best_region": best_loc[0],
-        "price_diff_pct": best_loc[1],
+        "Region": region_selectbox,
+        "Best Region": best_loc[0],
+        "Price Diff %": best_loc[1],
         "SKU": best_sku,
-        "low_pri_price": low_price,
-        "dedicated_price": ded_price,
-        "desired_machines": desired_nodes,
-        "desired_iterations": desired_iterations,
-        "total_cost": total_cost,
+        "Price (Low Pri)": low_price,
+        "Price (Dedicated)": ded_price,
+        "Desired VMs": desired_nodes,
+        "Desired Iterations": desired_iterations,
+        "Total Cost ($)": total_cost,
     },
     index=[0],
 )

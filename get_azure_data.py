@@ -1,5 +1,5 @@
 import json
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 import pandas as pd
 from bs4 import BeautifulSoup
@@ -51,15 +51,30 @@ def get_table(
 
     print(azure_price_url)
 
-    html = urlopen(azure_price_url)
-    soup = BeautifulSoup(html, "html.parser")
-    # body_script = soup.find("body").script
-    body_script = soup.find_all("script")[17]
-    body_script_contents = body_script.contents
+    # html = urlopen(azure_price_url)
+    hdr = {"User-Agent": "Mozilla/5.0"}
+    req = Request(azure_price_url, headers=hdr)
+    html = urlopen(req)
 
-    table_str = str(body_script_contents)
-    # extract data
-    b = table_str[15:-7]
+    soup = BeautifulSoup(html, "html.parser")
+    table = soup.find("table")
+    headings = [th.get_text().strip() for th in table.find("tr").find_all("th")]
+    table_body = soup.find("tbody")
+    data_list = []
+
+    rows = table_body.find_all("tr")
+    for row in rows:
+        data_list.append([x.get_text() for x in row.find_all("td")])
+    data_df = pd.DataFrame(data_list, columns=headings)
+    table_df = data_df.drop(columns=data_df.columns.to_list()[-2])
+
+    # body_script = soup.find("body").script
+    # body_script = soup.find_all("script")[17]
+    # body_script_contents = body_script.contents
+
+    # table_str = str(body_script_contents)
+    # # extract data
+    # b = table_str[15:-7]
 
     if host_os == "linux":
         drop_os = "windows"
@@ -67,9 +82,12 @@ def get_table(
         drop_os = "linux"
     regex_os = "(?i)" + drop_os
 
-    table_df = pd.DataFrame(json.loads(b))
-    table_df = table_df[columns_to_show]
+    # table_df = pd.DataFrame(json.loads(b))
+    # table_df = table_df[columns_to_show]
     table_df = table_df[table_df.columns.drop(list(table_df.filter(regex=regex_os)))]
+    table_df[["vCPUs", "Memory (GiB)"]] = table_df[["vCPUs", "Memory (GiB)"]].apply(
+        pd.to_numeric
+    )
     return table_df
 
 
