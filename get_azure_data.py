@@ -1,25 +1,7 @@
-import json
 from urllib.request import Request, urlopen
 
 import pandas as pd
 from bs4 import BeautifulSoup
-
-columns_to_show = [
-    "name",
-    "numberOfCores",
-    # "osDiskSizeInMB",
-    # "resourceDiskSizeInMB",
-    # "maxDataDiskCount",
-    "memoryInMB",
-    "linuxPrice",
-    "windowsPrice",
-    "regionId",
-    "pricePerMemoryLinux",
-    "pricePerMemoryWindows",
-    "pricePerCoreLinux",
-    "pricePerCoreWindows",
-    "bestPriceRegion",
-]
 
 
 def get_table(
