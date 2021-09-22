@@ -85,7 +85,7 @@ os_selectbox = st.sidebar.selectbox("Which OS will you be using?", ("windows", "
 
 sim_speed = st.sidebar.number_input(
     "Simulator speed for a single instance (it / s)",
-    value=10.000,
+    value=1.000,
     min_value=0.000,
     max_value=500.000,
     format="%.4f",
@@ -217,7 +217,7 @@ st.markdown(
 )
 
 desired_nodes = st.slider(
-    "Max number of instances for training", min_value=10, max_value=750, value=300
+    "Max number of instances for training", min_value=10, max_value=750, value=50
 )
 
 
@@ -239,7 +239,7 @@ low_pri_perc = st.slider(
     "Low priority virtual machines to dedicated virtual machines ratio",
     min_value=0.0,
     max_value=1.0,
-    value=0.9,
+    value=0.1,
 )
 
 low_pri_nodes = floor(low_pri_perc * desired_nodes)
@@ -286,7 +286,7 @@ total_cost = (low_price * time_scaled_hours * low_pri_nodes) + (
 
 
 st.markdown(
-    f"In {region_selectbox}, the best price for a {num_cores}-core machine with {memory} GB RAM is a **{best_sku}** VM which costs ${low_price}/hour for one low-priority VM and ${ded_price}/hour for one dedicated VM. You can save **{best_loc[1]}%** if you instead use __{best_loc[0]}__."
+    f"In {region_selectbox}, the best price for a {num_cores}-core machine with {memory} GB RAM is a **{best_sku}** VM which costs ${low_price}/hour for one low-priority VM and ${ded_price}/hour for one dedicated VM. Your cost will be **{best_loc[1]}** lower if you instead use __{best_loc[0]}__."
 )
 
 st.markdown(
