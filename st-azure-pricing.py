@@ -135,15 +135,15 @@ def load_data(
     dedicated_df = get_table(region=region, low_pri=False, host_os=os_selectbox)
 
     if gpu_needed == "NC-series":
-        low_pri_df = low_pri_df[low_pri_df["name"].str.contains("NC")]
-        dedicated_df = dedicated_df[dedicated_df["name"].str.contains("NC")]
+        low_pri_df = low_pri_df[low_pri_df["VM Name"].str.contains("NC")]
+        dedicated_df = dedicated_df[dedicated_df["VM Name"].str.contains("NC")]
         if low_pri_df.shape[0] == 0:
             raise ValueError(
                 f"No NC-series VMs available in {region}. Please try westus2, southcentral, or eastus"
             )
     elif gpu_needed == "NV-series":
-        low_pri_df = low_pri_df[low_pri_df["name"].str.contains("NV")]
-        dedicated_df = dedicated_df[dedicated_df["name"].str.contains("NV")]
+        low_pri_df = low_pri_df[low_pri_df["VM Name"].str.contains("NV")]
+        dedicated_df = dedicated_df[dedicated_df["VM Name"].str.contains("NV")]
         if low_pri_df.shape[0] == 0:
             raise ValueError(
                 f"No NV-series VMs available in {region}. Please try westus2, southcentral, or eastus"
