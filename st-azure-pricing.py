@@ -29,17 +29,15 @@ QUESTIONS:
 """
 
 import base64
-import datetime
 import os
-from math import ceil, floor
-from os import cpu_count
-from typing import List, Tuple
+from math import floor
+from typing import Tuple
 
 import pandas as pd
 import streamlit as st
 from PIL import Image
 
-from get_azure_data import calculate_price, get_table
+from get_azure_data import get_table, get_date_fetched
 
 st.set_page_config(layout="wide")
 
@@ -289,11 +287,12 @@ st.markdown(
     f"In {region_selectbox}, the best price for a {num_cores}-core machine with {memory} GB RAM is a **{best_sku}** VM which costs ${low_price}/hour for one low-priority VM and ${ded_price}/hour for one dedicated VM. Your cost will be **{best_loc[1]}** lower if you instead use __{best_loc[0]}__."
 )
 
+date_fetched = get_date_fetched()
 st.markdown(
     f"""
 ## Total Cost Projection:
 Your total cost in {region_selectbox} is **${total_cost:,.2f}**.
-\n**Note**, prices are in dollars and based on estimates for {datetime.datetime.now().strftime("%Y-%m-%d, %H:%M (PST).")}
+\n**Note**: {date_fetched}.
 """
 )
 

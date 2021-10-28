@@ -31,9 +31,6 @@ def get_table(
     else:
         azure_price_url += "&tier=standard"
 
-    print(azure_price_url)
-
-    # html = urlopen(azure_price_url)
     hdr = {"User-Agent": "Mozilla/5.0"}
     req = Request(azure_price_url, headers=hdr)
     html = urlopen(req)
@@ -50,27 +47,38 @@ def get_table(
     data_df = pd.DataFrame(data_list, columns=headings)
     table_df = data_df.drop(columns=data_df.columns.to_list()[-2])
 
-    # body_script = soup.find("body").script
-    # body_script = soup.find_all("script")[17]
-    # body_script_contents = body_script.contents
-
-    # table_str = str(body_script_contents)
-    # # extract data
-    # b = table_str[15:-7]
-
     if host_os == "linux":
         drop_os = "windows"
     else:
         drop_os = "linux"
     regex_os = "(?i)" + drop_os
 
-    # table_df = pd.DataFrame(json.loads(b))
-    # table_df = table_df[columns_to_show]
     table_df = table_df[table_df.columns.drop(list(table_df.filter(regex=regex_os)))]
     table_df[["vCPUs", "Memory (GiB)"]] = table_df[["vCPUs", "Memory (GiB)"]].apply(
         pd.to_numeric
     )
     return table_df
+
+
+def get_date_fetched(region: str = "eastus", low_pri: bool = True) -> str:
+
+    azure_price_url = "https://azureprice.net/" + "?region=" + region
+
+    if low_pri:
+        azure_price_url += "&tier=low"
+    else:
+        azure_price_url += "&tier=standard"
+
+    hdr = {"User-Agent": "Mozilla/5.0"}
+    req = Request(azure_price_url, headers=hdr)
+    html = urlopen(req)
+
+    soup = BeautifulSoup(html, "html.parser")
+
+    p_txt = [x.get_text() for x in soup.find_all("p")]
+    time_str = [x for x in p_txt if "updated" in x][0]
+
+    return time_str
 
 
 def calculate_price(
@@ -127,5 +135,6 @@ def get_aci_pricing():
 
 if __name__ == "__main__":
 
-    print(get_table("westus").head())
-    # get_aci_pricing()
+    # print(get_date_fetched())
+    # print(get_table("westus").head())
+    get_aci_pricing()
