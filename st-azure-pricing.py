@@ -279,9 +279,8 @@ low_price = joined_df["Price (Low Pri)"][0]
 ded_price = joined_df["Price (Dedicated)"][0]
 best_loc = joined_df["Best price region / Diff"][0].split(" / ")
 total_cost = (low_price * time_scaled_hours * low_pri_nodes) + (
-    ded_price + time_scaled_hours * dedicated_nodes
+    ded_price * time_scaled_hours * dedicated_nodes
 )
-
 
 st.markdown(
     f"In {region_selectbox}, the best price for a {num_cores}-core machine with {memory} GB RAM is a **{best_sku}** VM which costs ${low_price}/hour for one low-priority VM and ${ded_price}/hour for one dedicated VM. Your cost will be **{best_loc[1]}** lower if you instead use __{best_loc[0]}__."
