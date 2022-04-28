@@ -148,11 +148,24 @@ def load_data(
             )
 
     if os_selectbox == "linux":
-        low_pri_df["Price"] = low_pri_df["Linux Cost"].astype(float)
-        dedicated_df["Price"] = dedicated_df["Linux Cost"].astype(float)
+        # low_pri_df["Price"] = low_pri_df["Linux Cost"].astype(float)
+        # dedicated_df["Price"] = dedicated_df["Linux Cost"].astype(float)
+        low_pri_df["Price"] = pd.to_numeric(
+            low_pri_df["Linux Cost"], errors="coerce", downcast="float"
+        )
+        dedicated_df["Price"] = pd.to_numeric(
+            dedicated_df["Linux Cost"], errors="coerce", downcast="float"
+        )
+
     else:
-        low_pri_df["Price"] = low_pri_df["Windows Cost"].astype(float)
-        dedicated_df["Price"] = dedicated_df["Windows Cost"].astype(float)
+        low_pri_df["Price"] = pd.to_numeric(
+            low_pri_df["Windows Cost"], errors="coerce", downcast="float"
+        )
+        dedicated_df["Price"] = pd.to_numeric(
+            dedicated_df["Windows Cost"], errors="coerce", downcast="float"
+        )
+        # low_pri_df["Price"] = low_pri_df["Windows Cost"].astype(float)
+        # dedicated_df["Price"] = dedicated_df["Windows Cost"].astype(float)
 
     low_pri_df = low_pri_df[
         (low_pri_df.vCPUs.astype("float") >= num_cores)
