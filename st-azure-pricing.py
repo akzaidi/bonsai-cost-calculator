@@ -151,18 +151,18 @@ def load_data(
         # low_pri_df["Price"] = low_pri_df["Linux Cost"].astype(float)
         # dedicated_df["Price"] = dedicated_df["Linux Cost"].astype(float)
         low_pri_df["Price"] = pd.to_numeric(
-            low_pri_df["Linux Cost"], errors="coerce", downcast="float"
+            low_pri_df["Linux Price"], errors="coerce", downcast="float"
         )
         dedicated_df["Price"] = pd.to_numeric(
-            dedicated_df["Linux Cost"], errors="coerce", downcast="float"
+            dedicated_df["Linux Price"], errors="coerce", downcast="float"
         )
 
     else:
         low_pri_df["Price"] = pd.to_numeric(
-            low_pri_df["Windows Cost"], errors="coerce", downcast="float"
+            low_pri_df["Windows Price"], errors="coerce", downcast="float"
         )
         dedicated_df["Price"] = pd.to_numeric(
-            dedicated_df["Windows Cost"], errors="coerce", downcast="float"
+            dedicated_df["Windows Price"], errors="coerce", downcast="float"
         )
         # low_pri_df["Price"] = low_pri_df["Windows Cost"].astype(float)
         # dedicated_df["Price"] = dedicated_df["Windows Cost"].astype(float)
@@ -296,7 +296,7 @@ total_cost = (low_price * time_scaled_hours * low_pri_nodes) + (
 )
 
 st.markdown(
-    f"In {region_selectbox}, the best price for a {num_cores}-core machine with {memory} GB RAM is a **{best_sku}** VM which costs ${low_price}/hour for one low-priority VM and ${ded_price}/hour for one dedicated VM. Your cost will be **{best_loc[1]}** lower if you instead use __{best_loc[0]}__."
+    f"In {region_selectbox}, the best price for a {num_cores}-core machine with {memory} GB RAM is a **{best_sku}** VM which costs \\${low_price:.2f}/hour for one low-priority VM and \\${ded_price:.2f}/hour for one dedicated VM. Your cost will be **{best_loc[1]}** lower if you instead use __{best_loc[0]}__."
 )
 
 date_fetched = get_date_fetched()
